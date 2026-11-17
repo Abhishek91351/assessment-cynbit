@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Passive browser-visible backend technical assessment of Cynbit's candidate application progress page.">
+  <title>Backend Technical Audit | Cynbit</title>
+  <style>
+    :root {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #172a33;
+      background: #f3f7f7;
+      font-synthesis: none;
+      line-height: 1.65;
+      --teal: #087c78;
+      --dark-teal: #075d5a;
+      --muted: #62727a;
+      --line: #dce6e8;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: var(--dark-teal); }
+    .topbar { padding: 12px 24px; background: #102c34; color: #e9f4f3; font-size: .82rem; }
+    .topbar-inner, main, footer { width: min(1080px, calc(100% - 40px)); margin-inline: auto; }
+    .topbar-inner { display: flex; justify-content: space-between; gap: 16px; }
+    .brand { color: #a9e3dc; font-weight: 800; letter-spacing: .14em; }
+    .report-label { color: #c5d6d9; }
+    main { padding: 42px 0 64px; }
+    .hero {
+      padding: clamp(28px, 6vw, 58px); border-radius: 26px;
+      background: linear-gradient(125deg, #123840, #087c78); color: white;
+      box-shadow: 0 18px 45px #143a3d20;
+    }
+    .eyebrow, .kicker { font-size: .74rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    .eyebrow { margin: 0 0 10px; color: #a8e8df; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 760px; margin-bottom: 14px; font-size: clamp(2rem, 5vw, 3.45rem); letter-spacing: -.045em; line-height: 1.08; }
+    .hero-lede { max-width: 700px; margin-bottom: 28px; color: #d8e9e9; font-size: 1.05rem; }
+    .meta-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .meta-pill { padding: 7px 12px; border: 1px solid #ffffff3d; border-radius: 999px; font-size: .83rem; }
+    .toolbar { display: flex; justify-content: flex-end; margin: 18px 0; }
+    .print-button { padding: 10px 15px; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--dark-teal); font: inherit; font-size: .88rem; font-weight: 700; cursor: pointer; }
+    .print-button:hover { background: #e7f4f2; }
+    .print-button:focus-visible, a:focus-visible { outline: 3px solid #54b7ae; outline-offset: 3px; }
+    .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 22px; align-items: start; }
+    .toc, .card { border: 1px solid var(--line); border-radius: 18px; background: white; box-shadow: 0 5px 18px #18384008; }
+    .toc { position: sticky; top: 16px; padding: 18px; }
+    .toc h2 { margin-bottom: 12px; font-size: .84rem; letter-spacing: .08em; text-transform: uppercase; }
+    .toc ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .toc a { color: var(--muted); font-size: .88rem; text-decoration: none; }
+    .toc a:hover { color: var(--dark-teal); }
+    .content { display: grid; gap: 18px; min-width: 0; }
+    .card { padding: clamp(20px, 4vw, 30px); scroll-margin-top: 16px; }
+    .kicker { margin-bottom: 5px; color: var(--teal); }
+    h2 { margin-bottom: 14px; font-size: clamp(1.35rem, 3vw, 1.8rem); letter-spacing: -.025em; line-height: 1.2; }
+    h3 { margin-bottom: 8px; font-size: 1.08rem; line-height: 1.35; }
+    p { margin-bottom: 12px; }
+    p:last-child { margin-bottom: 0; }
+    .muted, .fine-print { color: var(--muted); }
+    .fine-print { font-size: .9rem; }
+    .summary-grid, .roadmap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .summary-grid { margin-top: 20px; }
+    .summary-item, .mini-card, .roadmap-item { padding: 16px; border: 1px solid var(--line); border-radius: 13px; background: #f8fbfb; }
+    .summary-item strong { display: block; margin-bottom: 5px; color: var(--dark-teal); font-size: 1.1rem; }
+    .summary-item span { color: var(--muted); font-size: .85rem; }
+    .callout { margin-top: 18px; padding: 15px 17px; border-left: 4px solid var(--teal); border-radius: 0 10px 10px 0; background: #e7f4f2; }
+    .finding { padding: 20px 0; border-top: 1px solid var(--line); }
+    .finding:first-of-type { padding-top: 2px; border-top: 0; }
+    .finding:last-child { padding-bottom: 0; }
+    .finding-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-bottom: 9px; }
+    .badge { display: inline-flex; padding: 4px 9px; border-radius: 999px; font-size: .73rem; font-weight: 800; letter-spacing: .035em; text-transform: uppercase; }
+    .medium { background: #fff3df; color: #a45b08; }
+    .low { background: #edf3fc; color: #315d9b; }
+    .note { background: #e7f4f2; color: var(--dark-teal); }
+    .evidence { margin: 10px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: #fbfdfd; color: #344a52; font-size: .91rem; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .mini-card h3 { font-size: .98rem; }
+    ul, ol { padding-left: 21px; }
+    li { margin-bottom: 7px; }
+    pre { overflow-x: auto; margin: 12px 0 0; padding: 18px; border-radius: 13px; background: #102c34; color: #e5f3f2; font: .82rem/1.65 "Cascadia Code", Consolas, monospace; tab-size: 2; }
+    code { font-family: "Cascadia Code", Consolas, monospace; }
+    .roadmap { counter-reset: step; }
+    .roadmap-item { counter-increment: step; }
+    .roadmap-item::before { display: inline-grid; width: 28px; height: 28px; margin-bottom: 9px; place-items: center; border-radius: 50%; background: #e7f4f2; color: var(--dark-teal); content: counter(step); font-weight: 800; }
+    footer { padding: 0 0 35px; color: var(--muted); font-size: .83rem; text-align: center; }
+    @media (max-width: 760px) {
+      .layout { grid-template-columns: 1fr; }
+      .toc { position: static; }
+      .toc ul { grid-template-columns: repeat(2, 1fr); }
+      .summary-grid, .roadmap { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      .topbar-inner { align-items: flex-start; flex-direction: column; gap: 3px; }
+      .two-col, .toc ul { grid-template-columns: 1fr; }
+    }
+    @media print {
+      body { background: white; font-size: 10pt; }
+      .topbar { border-bottom: 1px solid var(--line); background: white; color: #172a33; }
+      .brand, .report-label { color: #172a33; }
+      main { width: 100%; padding: 16px 0; }
+      .hero { padding: 28px; background: #123840 !important; print-color-adjust: exact; }
+      .toolbar, .toc { display: none; }
+      .layout { display: block; }
+      .content { gap: 12px; }
+      .card { box-shadow: none; break-inside: avoid; }
+      pre { white-space: pre-wrap; }
+      footer { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <span class="brand">BACKEND / FIELD NOTES</span>
+      <span class="report-label">Technical Assessment · Cynbit Technologies</span>
+    </div>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="report-title">
+      <p class="eyebrow">Practical Engineering Assessment</p>
+      <h1 id="report-title">Backend Technical Audit</h1>
+      <p class="hero-lede">A cautious, browser-visible review of the candidate application progress experience, with prioritized recommendations for data protection, correctness, validation, and operational reliability.</p>
+      <div class="meta-row">
+        <span class="meta-pill">Prepared: 17 November 2026</span>
+        <span class="meta-pill">Role: Backend Developer Intern</span>
+        <span class="meta-pill">Method: Passive observation only</span>
+      </div>
+    </section>
+    <div class="toolbar"><button class="print-button" type="button" onclick="window.print()" aria-label="Print report or save it as PDF">Print / Save as PDF</button></div>
+    <div class="layout">
+      <nav class="toc" aria-label="Report contents">
+        <h2>Contents</h2>
+        <ul>
+          <li><a href="#summary">Executive summary</a></li>
+          <li><a href="#scope">Scope &amp; method</a></li>
+          <li><a href="#architecture">Observable architecture</a></li>
+          <li><a href="#api-contract">API &amp; payload model</a></li>
+          <li><a href="#findings">Findings</a></li>
+          <li><a href="#recommendations">Recommendations</a></li>
+          <li><a href="#design">Example design</a></li>
+          <li><a href="#verification">Next verification steps</a></li>
+        </ul>
+      </nav>
+      <div class="content">
+        <section class="card" id="summary" aria-labelledby="summary-title">
+          <p class="kicker">01 / Overview</p>
+          <h2 id="summary-title">Executive summary</h2>
+          <p>The supplied candidate progress page presents a multi-stage application workflow and a form for submitting a primary deliverable link, up to four additional links, and optional execution notes. The page also displays profile attributes that are personal data. One visible data-consistency concern is that the identifier in the page URL does not match the reference code displayed in the page.</p>
+          <p>This review did not make direct API requests, submit forms, test access controls, or inspect server configuration. Therefore, it identifies <strong>review items and improvement opportunities</strong>, not confirmed vulnerabilities. The most useful next step is to verify server-side candidate authorization and the record-to-reference-code mapping in an authorized test environment.</p>
+          <div class="summary-grid">
+            <div class="summary-item"><strong>2 review items</strong><span>One privacy boundary, one data consistency concern</span></div>
+            <div class="summary-item"><strong>0 exploit tests</strong><span>No probing, payloads, or state-changing requests</span></div>
+            <div class="summary-item"><strong>Backend focus</strong><span>Recommendations for authorization, validation, and operations</span></div>
+          </div>
+          <div class="callout"><strong>Bottom line:</strong> treat candidate-specific data as protected at every server boundary; do not rely on an opaque URL identifier as authorization. Confirm the visible identifier mismatch before release or submission.</div>
+        </section>
+
+        <section class="card" id="scope" aria-labelledby="scope-title">
+          <p class="kicker">02 / Method</p>
+          <h2 id="scope-title">Scope and limitations</h2>
+          <div class="two-col">
+            <div class="mini-card">
+              <h3>Included</h3>
+              <ul>
+                <li>Visual and accessibility-tree review of the supplied candidate progress page.</li>
+                <li>Observation of the displayed workflow stages, profile-data categories, and deliverable form fields.</li>
+                <li>Defensive architecture recommendations based on common backend responsibilities.</li>
+              </ul>
+            </div>
+            <div class="mini-card">
+              <h3>Not performed</h3>
+              <ul>
+                <li>No endpoint discovery, direct HTTP/API calls, source-map inspection, or server fingerprinting.</li>
+                <li>No authentication or authorization bypass attempts; no record enumeration.</li>
+                <li>No form submission, load testing, fuzzing, or third-party link fetching.</li>
+              </ul>
+            </div>
+          </div>
+          <p class="fine-print" style="margin-top: 16px;">Consequently, authentication design, request/response payloads, transport headers, database structure, error behavior, latency, and caching policy remain unverified. Any statements about those areas below are recommendations or questions for an authorized follow-up, not observations.</p>
+        </section>
+
+        <section class="card" id="architecture" aria-labelledby="architecture-title">
+          <p class="kicker">03 / Observed surface</p>
+          <h2 id="architecture-title">Observable architecture and data flow</h2>
+          <p>From the browser, the page behaves like a web application that renders a candidate-specific progress dashboard. The visible information is organized into application screening and technical assessment stages. The second stage presents deliverable instructions alongside a form with a required primary link, an option to add up to four more links, and optional notes.</p>
+          <div class="evidence"><strong>What can be stated:</strong> candidate-profile fields and workflow details are rendered in the page; the submission UI allows a bounded number of links. <strong>What cannot be inferred:</strong> whether rendering is server-side or client-side, which API or database is used, how sessions are stored, and whether server-side validation or authorization is implemented.</div>
+          <p>A safe conceptual request flow is: authenticated candidate session → server checks ownership of the application record → service validates the submission → persistence layer records it → response returns a minimal status. Each step should be enforced by the backend even if the UI also applies convenience checks.</p>
+        </section>
+
+        <section class="card" id="api-contract" aria-labelledby="api-contract-title">
+          <p class="kicker">04 / Proposed interface</p>
+          <h2 id="api-contract-title">API structure and payload model</h2>
+          <p><strong>Observation limit:</strong> the page snapshot did not expose actual API routes, request bodies, response bodies, or status codes. The following is a proposed contract derived from the visible workflow, not a claim about Cynbit's implementation.</p>
+          <div class="two-col">
+            <div class="mini-card">
+              <h3>Read progress</h3>
+              <p class="fine-print"><code>GET /api/v1/candidate/applications/{applicationId}/progress</code></p>
+              <pre><code>{
+  "referenceCode": "candidate-facing-code",
+  "role": "Backend Developer Intern",
+  "stage": "technical_assessment",
+  "timeline": [
+    { "key": "screening", "status": "complete" },
+    { "key": "technical_assessment", "status": "active" }
+  ],
+  "deliverable": {
+    "additionalLinkLimit": 4,
+    "submissionStatus": "not_submitted"
+  }
+}</code></pre>
+            </div>
+            <div class="mini-card">
+              <h3>Submit deliverables</h3>
+              <p class="fine-print"><code>POST /api/v1/candidate/applications/{applicationId}/deliverables</code></p>
+              <pre><code>{
+  "primaryUrl": "https://example.org/report",
+  "additionalUrls": [],
+  "notes": "Implementation notes"
+}</code></pre>
+              <p class="fine-print" style="margin-top: 12px;">Suggested success response: <code>201</code> with a submission ID, received status, and timestamp. Store only what the workflow needs.</p>
+            </div>
+          </div>
+          <div class="evidence"><strong>Suggested error shape:</strong> return stable machine-readable error codes and a request ID, for example <code>{"error":{"code":"VALIDATION_ERROR","message":"Check the submitted fields","requestId":"..."}}</code>. Use consistent 401/404/409/422 responses as appropriate; do not return stack traces, database details, or another candidate's data. Actual error behavior was not tested.</div>
+          <p class="fine-print">The candidate-profile fields visible in the page are personal data. If needed by the screen, return only the minimum fields, only after authenticating the candidate and checking application ownership. The display reference code should be sourced from the same authorized application record as the status and submission.</p>
+        </section>
+
+        <section class="card" id="findings" aria-labelledby="findings-title">
+          <p class="kicker">05 / Review items</p>
+          <h2 id="findings-title">Security, correctness, and performance findings</h2>
+          <article class="finding">
+            <div class="finding-heading"><span class="badge medium">Medium · Verify</span><h3>Candidate data requires a strict server-side access boundary</h3></div>
+            <p><strong>Category:</strong> privacy / authorization. <strong>Confidence:</strong> high that personal-data categories are displayed; no conclusion about server authorization.</p>
+            <div class="evidence"><strong>Evidence:</strong> the progress page displays candidate identity and contact, education, and location attributes. The page URL contains a candidate-specific identifier. The visible page alone does not establish whether an authenticated session and record-ownership check protect this data.</div>
+            <p><strong>Risk if the boundary is missing:</strong> an improperly authorized request could expose one candidate's application details to another user. This is a risk scenario, not a demonstrated issue.</p>
+            <p><strong>Recommendation:</strong> require an authenticated principal for every candidate read and write; derive the permitted candidate/application scope from server-side identity and verify record ownership on every request. Treat URL identifiers as lookup keys only, never as bearer credentials. Return only fields needed for the screen, avoid logging full profile payloads, and apply private/no-store caching to personalized responses.</p>
+          </article>
+          <article class="finding">
+            <div class="finding-heading"><span class="badge low">Low · Confirm</span><h3>Page identifier and displayed reference code differ</h3></div>
+            <p><strong>Category:</strong> data integrity / supportability. <strong>Confidence:</strong> high for the visible discrepancy; its cause and impact are unknown.</p>
+            <div class="evidence"><strong>Evidence:</strong> the candidate identifier in the page URL and the “Reference Code” shown in the page are not the same value. The values are intentionally not repeated here.</div>
+            <p><strong>Risk:</strong> candidates or support staff may associate an action with the wrong tracking identifier; developers may also have difficulty correlating a page view with the correct application record.</p>
+            <p><strong>Recommendation:</strong> define distinct, explicitly named fields for the internal application key and the candidate-facing reference code. Load both from the same authorized application record and test that the displayed code is stable and maps back to that record. Add a request/trace ID for diagnostics rather than exposing database keys in logs or UI.</p>
+          </article>
+          <article class="finding">
+            <div class="finding-heading"><span class="badge note">Not assessed · Hardening</span><h3>Submission validation and error handling need server-side guarantees</h3></div>
+            <p><strong>Category:</strong> input validation / reliability. The visible form labels show required and optional fields and a five-link maximum, but no input was submitted; server behavior is unknown.</p>
+            <p><strong>Recommendation:</strong> enforce the link count, field lengths, URL parsing, and allowed schemes on the server. Reject malformed input with a clear 4xx response that does not reveal stack traces or internal details. If the application ever fetches a submitted URL, use a separately reviewed outbound-fetch design with strict destination controls; the simplest and safest option is not to fetch candidate-provided links on submission.</p>
+          </article>
+          <article class="finding">
+            <div class="finding-heading"><span class="badge note">Not measured · Performance</span><h3>Protect personalized responses and measure the critical path</h3></div>
+            <p>No response timings, payload sizes, or cache headers were measured. For a dashboard of this shape, keep static assets cacheable and versioned, but make candidate-specific responses private and non-shareable. Measure page-data query latency and payload size with representative authorized test data before optimizing; avoid speculative caching of personal records.</p>
+          </article>
+        </section>
+
+        <section class="card" id="recommendations" aria-labelledby="recommendations-title">
+          <p class="kicker">06 / Action plan</p>
+          <h2 id="recommendations-title">Recommended improvements</h2>
+          <div class="roadmap">
+            <div class="roadmap-item"><h3>Enforce ownership</h3><p class="fine-print">Centralize authentication and application-ownership checks for every read and write. Deny by default and test cross-candidate isolation in a controlled environment.</p></div>
+            <div class="roadmap-item"><h3>Validate at the boundary</h3><p class="fine-print">Use a typed request schema, server-side length/count limits, URL parsing, and consistent 4xx errors. Treat browser validation as usability only.</p></div>
+            <div class="roadmap-item"><h3>Improve observability</h3><p class="fine-print">Correlate requests with a trace ID; log outcome, latency, and record key in a privacy-conscious form. Never log credentials or unnecessary profile details.</p></div>
+          </div>
+        </section>
+
+        <section class="card" id="design" aria-labelledby="design-title">
+          <p class="kicker">07 / Illustrative implementation</p>
+          <h2 id="design-title">Example: authorize first, then validate</h2>
+          <p class="fine-print">Illustrative TypeScript/Express-style pseudocode only; it is not based on a claim that Cynbit uses this framework. In production, use the application's existing authentication, schema-validation, and error-handling conventions.</p>
+          <pre><code>const httpUrlSchema = z.string().url().max(2048).refine((value) =&gt; {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "https:" || protocol === "http:";
+  } catch {
+    return false;
+  }
+});
+
+const submissionSchema = z.object({
+            primaryUrl: httpUrlSchema,
+            additionalUrls: z.array(httpUrlSchema).max(4).default([]),
+  notes: z.string().max(4000).optional()
+}).strict();
+
+app.post("/applications/:applicationId/deliverables", requireUser, async (req, res) =&gt; {
+  const application = await applications.findById(req.params.applicationId);
+  if (!application || application.candidateId !== req.user.id) {
+    return res.sendStatus(404);
+  }
+
+            const input = submissionSchema.safeParse(req.body);
+            if (!input.success) {
+              return res.status(400).json({ error: "Invalid submission" });
+            }
+
+  const saved = await deliverables.save({
+    applicationId: application.id,
+    ...input.data
+  });
+
+  return res.status(201).json({ id: saved.id, status: "received" });
+});</code></pre>
+          <div class="callout"><strong>Important:</strong> adapt the schema to approved URL schemes and product requirements. The ownership check must use trusted server-side identity, and production code should handle persistence errors, concurrency, audit events, and idempotency using established project patterns.</div>
+        </section>
+
+        <section class="card" id="verification" aria-labelledby="verification-title">
+          <p class="kicker">08 / Follow-up</p>
+          <h2 id="verification-title">Authorized verification checklist</h2>
+          <ol>
+            <li>In a staging environment with test accounts, confirm that one candidate cannot read or modify another candidate's application by changing identifiers.</li>
+            <li>Check that missing/expired authentication and unauthorized ownership produce safe, consistent responses without leaking record existence or personal data.</li>
+            <li>Submit boundary cases through the normal UI/API contract: zero and five total links, too many links, malformed URL, unsupported scheme, oversized notes, and duplicate submission.</li>
+            <li>Verify the page reference code is derived from the same application record as the URL target, and that support tooling can correlate the event without exposing sensitive data.</li>
+            <li>Measure representative dashboard latency and response size; review cache policy to ensure personalized responses are not stored in shared caches.</li>
+          </ol>
+          <p class="fine-print"><strong>Conclusion:</strong> the visible experience gives candidates a clear staged workflow. Backend confidence depends on confirming ownership enforcement, input validation, and identifier consistency where the service can be tested safely and with authorization.</p>
+        </section>
+      </div>
+    </div>
+  </main>
+  <footer>Prepared for the Backend Developer Intern technical assessment · Passive review only · No live system testing performed</footer>
+</body>
+</html>
